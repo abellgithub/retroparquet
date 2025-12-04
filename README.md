@@ -16,4 +16,8 @@ This repository serves as the authoritative source for the Retroparquet file for
 
 ## Contributing
 
-Contributions to improve the specification documentation are welcome. Please open an issue or pull request with your suggestions.
+Contributions to improve the specification documentation are welcome. Please see our [Contributing Guide](CONTRIBUTING.md) for details on how to get started.
+
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
