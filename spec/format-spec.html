@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Retroparquet File Format Specification</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            line-height: 1.6;
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 20px;
+            color: #333;
+            background-color: #fff;
+        }
+        h1 {
+            color: #2c3e50;
+            border-bottom: 3px solid #3498db;
+            padding-bottom: 10px;
+        }
+        h2 {
+            color: #34495e;
+            border-bottom: 2px solid #ecf0f1;
+            padding-bottom: 8px;
+            margin-top: 40px;
+        }
+        h3 {
+            color: #34495e;
+            margin-top: 25px;
+        }
+        .metadata {
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-left: 4px solid #3498db;
+            margin: 20px 0;
+        }
+        .metadata p {
+            margin: 5px 0;
+        }
+        table {
+            border-collapse: collapse;
+            width: 100%;
+            margin: 20px 0;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 12px;
+            text-align: left;
+        }
+        th {
+            background-color: #3498db;
+            color: white;
+            font-weight: bold;
+        }
+        tr:nth-child(even) {
+            background-color: #f8f9fa;
+        }
+        pre {
+            background-color: #f4f4f4;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 15px;
+            overflow-x: auto;
+            font-family: 'Courier New', monospace;
+        }
+        code {
+            background-color: #f4f4f4;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+        }
+        ul, ol {
+            margin: 15px 0;
+            padding-left: 30px;
+        }
+        li {
+            margin: 8px 0;
+        }
+        a {
+            color: #3498db;
+            text-decoration: none;
+        }
+        a:hover {
+            text-decoration: underline;
+        }
+        .note {
+            background-color: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 15px;
+            margin: 20px 0;
+        }
+        hr {
+            border: none;
+            border-top: 2px solid #ecf0f1;
+            margin: 40px 0;
+        }
+    </style>
+</head>
+<body>
+
+<h1>Retroparquet File Format Specification</h1>
+
+<div class="metadata">
+    <p><strong>Version:</strong> 1.0</p>
+    <p><strong>Status:</strong> Draft</p>
+    <p><strong>Last Updated:</strong> December 2024</p>
+</div>
+
+<h2 id="table-of-contents">Table of Contents</h2>
+<ol>
+    <li><a href="#introduction">Introduction</a></li>
+    <li><a href="#file-structure">File Structure</a></li>
+    <li><a href="#data-types">Data Types</a></li>
+    <li><a href="#encoding">Encoding</a></li>
+    <li><a href="#compression">Compression</a></li>
+    <li><a href="#metadata">Metadata</a></li>
+    <li><a href="#example">Example</a></li>
+</ol>
+
+<h2 id="introduction">Introduction</h2>
+
+<p>Retroparquet is a columnar storage file format optimized for efficient data storage and retrieval. It is designed to provide:</p>
+
+<ul>
+    <li><strong>Column-oriented storage</strong> for efficient querying of specific columns</li>
+    <li><strong>Compression support</strong> to reduce storage footprint</li>
+    <li><strong>Schema evolution</strong> capabilities</li>
+    <li><strong>Type safety</strong> with well-defined data types</li>
+</ul>
+
+<h2 id="file-structure">File Structure</h2>
+
+<p>A Retroparquet file consists of the following components:</p>
+
+<pre>
++------------------+
+| Magic Number     | 4 bytes: "RPQT"
++------------------+
+| Version          | 2 bytes: Major.Minor
++------------------+
+| Schema           | Variable length
++------------------+
+| Row Groups       | Variable length (1 or more)
++------------------+
+| Footer           | Variable length
++------------------+
+| Footer Length    | 4 bytes
++------------------+
+| Magic Number     | 4 bytes: "RPQT"
++------------------+
+</pre>
+
+<h3>Magic Number</h3>
+
+<p>Every Retroparquet file begins and ends with a 4-byte magic number: <code>RPQT</code> (0x52, 0x50, 0x51, 0x54).</p>
+
+<h3>Version</h3>
+
+<p>A 2-byte version identifier consisting of:</p>
+<ul>
+    <li>1 byte for major version</li>
+    <li>1 byte for minor version</li>
+</ul>
+
+<p>Current version: 1.0</p>
+
+<h3>Schema</h3>
+
+<p>The schema section defines the structure of the data, including:</p>
+<ul>
+    <li>Column names</li>
+    <li>Column data types</li>
+    <li>Compression settings per column</li>
+    <li>Encoding settings per column</li>
+</ul>
+
+<h3>Row Groups</h3>
+
+<p>Data is organized into row groups for efficient parallel processing. Each row group contains:</p>
+<ul>
+    <li>Column chunks for each column</li>
+    <li>Column metadata (encoding, compression, statistics)</li>
+</ul>
+
+<h3>Footer</h3>
+
+<p>The footer contains:</p>
+<ul>
+    <li>Schema information</li>
+    <li>Row group metadata</li>
+    <li>File-level metadata</li>
+    <li>Key-value pairs for custom metadata</li>
+</ul>
+
+<h2 id="data-types">Data Types</h2>
+
+<p>Retroparquet supports the following primitive data types:</p>
+
+<table>
+    <thead>
+        <tr>
+            <th>Type</th>
+            <th>Description</th>
+            <th>Size</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td>BOOLEAN</td>
+            <td>True or false value</td>
+            <td>1 bit</td>
+        </tr>
+        <tr>
+            <td>INT32</td>
+            <td>32-bit signed integer</td>
+            <td>4 bytes</td>
+        </tr>
+        <tr>
+            <td>INT64</td>
+            <td>64-bit signed integer</td>
+            <td>8 bytes</td>
+        </tr>
+        <tr>
+            <td>FLOAT</td>
+            <td>32-bit floating point</td>
+            <td>4 bytes</td>
+        </tr>
+        <tr>
+            <td>DOUBLE</td>
+            <td>64-bit floating point</td>
+            <td>8 bytes</td>
+        </tr>
+        <tr>
+            <td>BYTE_ARRAY</td>
+            <td>Variable-length byte array</td>
+            <td>Variable</td>
+        </tr>
+        <tr>
+            <td>STRING</td>
+            <td>UTF-8 encoded string</td>
+            <td>Variable</td>
+        </tr>
+    </tbody>
+</table>
+
+<h3>Logical Types</h3>
+
+<p>In addition to primitive types, Retroparquet supports logical types:</p>
+
+<ul>
+    <li><strong>DATE</strong>: Days since Unix epoch (INT32)</li>
+    <li><strong>TIME</strong>: Milliseconds since midnight (INT64)</li>
+    <li><strong>TIMESTAMP</strong>: Milliseconds since Unix epoch (INT64)</li>
+    <li><strong>DECIMAL</strong>: Fixed-point decimal (BYTE_ARRAY with precision and scale)</li>
+    <li><strong>UUID</strong>: 128-bit universally unique identifier (BYTE_ARRAY of 16 bytes)</li>
+</ul>
+
+<h2 id="encoding">Encoding</h2>
+
+<p>Retroparquet supports multiple encoding schemes for efficient storage:</p>
+
+<h3>Plain Encoding</h3>
+
+<p>Direct storage of values without encoding. This is the simplest encoding and serves as the default.</p>
+
+<h3>Dictionary Encoding</h3>
+
+<p>Values are replaced with integer indices into a dictionary. Efficient for columns with low cardinality.</p>
+
+<h3>Run Length Encoding (RLE)</h3>
+
+<p>Sequences of repeated values are stored as a single value with a count. Efficient for columns with many repeated values.</p>
+
+<h3>Delta Encoding</h3>
+
+<p>Stores the difference between consecutive values. Efficient for sorted or monotonically increasing columns.</p>
+
+<h3>Bit-packed Encoding</h3>
+
+<p>Packs multiple small values into a single byte. Efficient for boolean and small integer values.</p>
+
+<h2 id="compression">Compression</h2>
+
+<p>Column chunks can be compressed using the following algorithms:</p>
+
+<table>
+    <thead>
+        <tr>
+            <th>Algorithm</th>
+            <th>Description</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td>NONE</td>
+            <td>No compression</td>
+        </tr>
+        <tr>
+            <td>SNAPPY</td>
+            <td>Google's Snappy compression</td>
+        </tr>
+        <tr>
+            <td>GZIP</td>
+            <td>Standard GZIP compression</td>
+        </tr>
+        <tr>
+            <td>ZSTD</td>
+            <td>Zstandard compression</td>
+        </tr>
+        <tr>
+            <td>LZ4</td>
+            <td>LZ4 fast compression</td>
+        </tr>
+    </tbody>
+</table>
+
+<p>Compression is applied per column chunk, allowing different columns to use different compression algorithms based on their characteristics.</p>
+
+<h2 id="metadata">Metadata</h2>
+
+<h3>File Metadata</h3>
+
+<p>File-level metadata includes:</p>
+<ul>
+    <li>Schema version</li>
+    <li>Created by (tool/library name and version)</li>
+    <li>Number of rows</li>
+    <li>Number of row groups</li>
+    <li>Custom key-value pairs</li>
+</ul>
+
+<h3>Column Metadata</h3>
+
+<p>Column-level metadata includes:</p>
+<ul>
+    <li>Encoding used</li>
+    <li>Compression codec used</li>
+    <li>Number of values</li>
+    <li>Null count</li>
+    <li>Statistics (min, max, distinct count)</li>
+</ul>
+
+<h3>Row Group Metadata</h3>
+
+<p>Row group metadata includes:</p>
+<ul>
+    <li>Total byte size</li>
+    <li>Number of rows</li>
+    <li>Column chunk offsets</li>
+    <li>Column chunk sizes</li>
+</ul>
+
+<h2 id="example">Example</h2>
+
+<h3>Minimal Retroparquet File</h3>
+
+<p>Here's a conceptual example of a minimal Retroparquet file structure:</p>
+
+<pre>
+RPQT                          // Magic number
+0x01 0x00                     // Version 1.0
+[Schema Definition]           // Schema with 2 columns: id (INT32), name (STRING)
+[Row Group 1]                 // Single row group
+  [Column Chunk: id]          // Values: [1, 2, 3]
+  [Column Chunk: name]        // Values: ["Alice", "Bob", "Charlie"]
+[Footer]                      // Metadata about schema and row groups
+0x000000B4                    // Footer length (180 bytes)
+RPQT                          // Magic number
+</pre>
+
+<h3>Sample Data</h3>
+
+<p>Consider a simple dataset:</p>
+
+<table>
+    <thead>
+        <tr>
+            <th>id</th>
+            <th>name</th>
+            <th>age</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td>1</td>
+            <td>Alice</td>
+            <td>30</td>
+        </tr>
+        <tr>
+            <td>2</td>
+            <td>Bob</td>
+            <td>25</td>
+        </tr>
+        <tr>
+            <td>3</td>
+            <td>Charlie</td>
+            <td>35</td>
+        </tr>
+    </tbody>
+</table>
+
+<p>This would be stored in Retroparquet as three separate column chunks within a row group:</p>
+<ul>
+    <li><code>id</code> column: [1, 2, 3] (INT32, plain encoding)</li>
+    <li><code>name</code> column: ["Alice", "Bob", "Charlie"] (STRING, dictionary encoding)</li>
+    <li><code>age</code> column: [30, 25, 35] (INT32, plain encoding)</li>
+</ul>
+
+<h2>Implementation Notes</h2>
+
+<h3>Reading Retroparquet Files</h3>
+
+<ol>
+    <li>Read and verify the magic number at the start of the file</li>
+    <li>Read the version to ensure compatibility</li>
+    <li>Seek to the end and read the footer length</li>
+    <li>Read the footer to get schema and row group metadata</li>
+    <li>Read column chunks as needed (projection pushdown)</li>
+    <li>Decompress and decode column data</li>
+</ol>
+
+<h3>Writing Retroparquet Files</h3>
+
+<ol>
+    <li>Write the magic number and version</li>
+    <li>Write the schema definition</li>
+    <li>For each row group:
+        <ul>
+            <li>Encode and compress column chunks</li>
+            <li>Write column chunk data</li>
+            <li>Collect metadata (statistics, offsets, sizes)</li>
+        </ul>
+    </li>
+    <li>Write the footer with all metadata</li>
+    <li>Write the footer length and closing magic number</li>
+</ol>
+
+<h2>Future Considerations</h2>
+
+<ul>
+    <li>Support for nested data types (structs, arrays, maps)</li>
+    <li>Encryption support for sensitive data</li>
+    <li>Bloom filters for efficient filtering</li>
+    <li>Page-level organization within column chunks</li>
+    <li>Support for predicate pushdown optimizations</li>
+</ul>
+
+<h2>References</h2>
+
+<ul>
+    <li>Apache Parquet Format: <a href="https://parquet.apache.org/docs/" target="_blank">https://parquet.apache.org/docs/</a></li>
+    <li>Columnar Storage: <a href="https://en.wikipedia.org/wiki/Column-oriented_DBMS" target="_blank">https://en.wikipedia.org/wiki/Column-oriented_DBMS</a></li>
+    <li>Compression Algorithms: Various RFC and specification documents</li>
+</ul>
+
+<hr>
+
+<div class="note">
+    <strong>Note:</strong> This specification is subject to change as the format evolves. Please refer to the version number for compatibility information.
+</div>
+
+</body>
+</html>

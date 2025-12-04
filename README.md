@@ -8,7 +8,8 @@ Retroparquet is a file format specification designed for efficient columnar data
 
 ## Contents
 
-- [Format Specification](spec/format-spec.md) - The complete Retroparquet file format specification
+- [Format Specification (HTML)](spec/format-spec.html) - The complete Retroparquet file format specification
+- [Format Specification (Markdown)](spec/format-spec.md) - Markdown version of the specification
 
 ## Purpose
 
